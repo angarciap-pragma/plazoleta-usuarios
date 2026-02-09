@@ -1,6 +1,8 @@
 package com.plazoleta.usuarios.application.service;
 
+import com.plazoleta.usuarios.application.exception.UsuarioNotFoundException;
 import com.plazoleta.usuarios.application.port.in.CreatePropietarioUseCase;
+import com.plazoleta.usuarios.application.port.in.GetUsuarioRoleUseCase;
 import com.plazoleta.usuarios.application.port.out.PasswordEncoderPort;
 import com.plazoleta.usuarios.application.port.out.UsuarioRepositoryPort;
 import com.plazoleta.usuarios.domain.model.Role;
@@ -12,7 +14,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-public class CrearPropietarioService implements CreatePropietarioUseCase {
+public class CrearPropietarioService implements CreatePropietarioUseCase, GetUsuarioRoleUseCase {
 
 	private static final int MAYORIA_DE_EDAD = 18;
 
@@ -55,5 +57,13 @@ public class CrearPropietarioService implements CreatePropietarioUseCase {
 	private boolean esMayorDeEdad(LocalDate fechaNacimiento) {
 		LocalDate hoy = LocalDate.now();
 		return Period.between(fechaNacimiento, hoy).getYears() >= MAYORIA_DE_EDAD;
+	}
+
+	@Override
+	public Role obtenerRol(Long usuarioId) {
+		log.info("Get usuario role: id={}", usuarioId);
+		return usuarioRepository.findById(usuarioId)
+				.map(Usuario::getRol)
+				.orElseThrow(() -> new UsuarioNotFoundException(usuarioId));
 	}
 }

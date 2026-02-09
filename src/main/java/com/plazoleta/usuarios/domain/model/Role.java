@@ -1,5 +1,8 @@
 package com.plazoleta.usuarios.domain.model;
 
 public enum Role {
-	PROPIETARIO
+	ADMIN,
+	PROPIETARIO,
+	EMPLEADO,
+	CLIENTE
 }

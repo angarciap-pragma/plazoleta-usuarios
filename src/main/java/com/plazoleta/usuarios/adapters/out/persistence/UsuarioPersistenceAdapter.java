@@ -2,6 +2,7 @@ package com.plazoleta.usuarios.adapters.out.persistence;
 
 import com.plazoleta.usuarios.application.port.out.UsuarioRepositoryPort;
 import com.plazoleta.usuarios.domain.model.Usuario;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -36,5 +37,35 @@ public class UsuarioPersistenceAdapter implements UsuarioRepositoryPort {
 				saved.getCorreo(),
 				saved.getClave(),
 				saved.getRol());
+	}
+
+	@Override
+	public Optional<Usuario> findById(Long id) {
+		return usuarioJpaRepository.findById(id)
+				.map(entity -> new Usuario(
+						entity.getId(),
+						entity.getNombre(),
+						entity.getApellido(),
+						entity.getDocumentoIdentidad(),
+						entity.getCelular(),
+						entity.getFechaNacimiento(),
+						entity.getCorreo(),
+						entity.getClave(),
+						entity.getRol()));
+	}
+
+	@Override
+	public Optional<Usuario> findByCorreo(String correo) {
+		return usuarioJpaRepository.findByCorreo(correo)
+				.map(entity -> new Usuario(
+						entity.getId(),
+						entity.getNombre(),
+						entity.getApellido(),
+						entity.getDocumentoIdentidad(),
+						entity.getCelular(),
+						entity.getFechaNacimiento(),
+						entity.getCorreo(),
+						entity.getClave(),
+						entity.getRol()));
 	}
 }

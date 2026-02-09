@@ -1,5 +1,7 @@
 package com.plazoleta.usuarios.adapters.in.web;
 
+import com.plazoleta.usuarios.application.exception.CredencialesInvalidasException;
+import com.plazoleta.usuarios.application.exception.UsuarioNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -31,5 +33,21 @@ public class ApiExceptionHandler {
 		error.put("error", ex.getMessage());
 		log.warn("Request rejected: {}", ex.getMessage());
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+	}
+
+	@ExceptionHandler(UsuarioNotFoundException.class)
+	public ResponseEntity<Map<String, String>> handleUsuarioNotFound(UsuarioNotFoundException ex) {
+		Map<String, String> error = new HashMap<>();
+		error.put("error", ex.getMessage());
+		log.warn("Usuario not found: {}", ex.getMessage());
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+	}
+
+	@ExceptionHandler(CredencialesInvalidasException.class)
+	public ResponseEntity<Map<String, String>> handleCredencialesInvalidas(CredencialesInvalidasException ex) {
+		Map<String, String> error = new HashMap<>();
+		error.put("error", ex.getMessage());
+		log.warn("Login failed: {}", ex.getMessage());
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
 	}
 }
