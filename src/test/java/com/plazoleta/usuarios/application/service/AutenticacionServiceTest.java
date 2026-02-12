@@ -5,28 +5,32 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.plazoleta.usuarios.application.exception.CredencialesInvalidasException;
-import com.plazoleta.usuarios.application.port.in.AutenticacionUseCase;
+import com.plazoleta.usuarios.domain.exception.UnauthorizedException;
+import com.plazoleta.usuarios.application.port.in.AuthenticationUseCase;
 import com.plazoleta.usuarios.application.port.out.PasswordEncoderPort;
-import com.plazoleta.usuarios.application.port.out.UsuarioRepositoryPort;
+import com.plazoleta.usuarios.application.port.out.TokenServicePort;
+import com.plazoleta.usuarios.application.port.out.UsersRepositoryPort;
 import com.plazoleta.usuarios.domain.model.Role;
-import com.plazoleta.usuarios.domain.model.Usuario;
-import com.plazoleta.usuarios.infrastructure.security.JwtTokenService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+
+import com.plazoleta.usuarios.domain.model.UsersModel;
 import org.junit.jupiter.api.Test;
 
 class AutenticacionServiceTest {
 
 	@Test
 	void login_returnsTokenWhenCredentialsValid() {
-		UsuarioRepositoryPort repository = mock(UsuarioRepositoryPort.class);
+		// Mocks para aislar la prueba de infraestructura.
+		UsersRepositoryPort repository = mock(UsersRepositoryPort.class);
 		PasswordEncoderPort encoder = mock(PasswordEncoderPort.class);
-		JwtTokenService jwtTokenService = mock(JwtTokenService.class);
-		AutenticacionService service = new AutenticacionService(repository, encoder, jwtTokenService);
+		TokenServicePort tokenService = mock(TokenServicePort.class);
+		// Servicio real a probar.
+		AuthenticationService service = new AuthenticationService(repository, encoder, tokenService);
 
-		Usuario usuario = new Usuario(
+		// Usuario de ejemplo que retornara el repositorio.
+		UsersModel usuario = new UsersModel(
 				1L,
 				"Ana",
 				"Garcia",
@@ -37,29 +41,70 @@ class AutenticacionServiceTest {
 				"bcrypt",
 				Role.ADMIN);
 
-		when(repository.findByCorreo("ana@example.com")).thenReturn(Optional.of(usuario));
+		// Comportamiento esperado de los mocks.
+		when(repository.findByEmail("ana@example.com")).thenReturn(Optional.of(usuario));
 		when(encoder.matches("secreto", "bcrypt")).thenReturn(true);
-		when(jwtTokenService.generateToken("ana@example.com", 1L, List.of("ADMIN")))
+		when(tokenService.generateToken("ana@example.com", 1L, List.of("ADMIN")))
 				.thenReturn("jwt-token");
 
-		AutenticacionUseCase.LoginResult result = service.login(
-				new AutenticacionUseCase.LoginCommand("ana@example.com", "secreto"));
+		// Llamada al caso de uso.
+		AuthenticationUseCase.LoginResult result = service.login(
+				new AuthenticationUseCase.LoginCommand("ana@example.com", "secreto"));
 
-		assertThat(result.token()).isEqualTo("jwt-token");
-		assertThat(result.rol()).isEqualTo(Role.ADMIN);
+		// Asercion unica: el resultado debe ser el esperado.
+		assertThat(result).isEqualTo(new AuthenticationUseCase.LoginResult(
+				1L,
+				"ana@example.com",
+				Role.ADMIN,
+				"jwt-token"));
 	}
 
 	@Test
 	void login_throwsWhenCredentialsInvalid() {
-		UsuarioRepositoryPort repository = mock(UsuarioRepositoryPort.class);
+		// Mocks para aislar la prueba de infraestructura.
+		UsersRepositoryPort repository = mock(UsersRepositoryPort.class);
 		PasswordEncoderPort encoder = mock(PasswordEncoderPort.class);
-		JwtTokenService jwtTokenService = mock(JwtTokenService.class);
-		AutenticacionService service = new AutenticacionService(repository, encoder, jwtTokenService);
+		TokenServicePort tokenService = mock(TokenServicePort.class);
+		// Servicio real a probar.
+		AuthenticationService service = new AuthenticationService(repository, encoder, tokenService);
 
-		when(repository.findByCorreo("ana@example.com")).thenReturn(Optional.empty());
+		// No existe usuario con ese correo.
+		when(repository.findByEmail("ana@example.com")).thenReturn(Optional.empty());
 
+		// Asercion unica: debe lanzar excepcion.
 		assertThatThrownBy(() -> service.login(
-				new AutenticacionUseCase.LoginCommand("ana@example.com", "secreto")))
-				.isInstanceOf(CredencialesInvalidasException.class);
+				new AuthenticationUseCase.LoginCommand("ana@example.com", "secreto")))
+				.isInstanceOf(UnauthorizedException.class);
+	}
+
+	@Test
+	void login_throwsWhenPasswordDoesNotMatch() {
+		// Mocks para aislar la prueba de infraestructura.
+		UsersRepositoryPort repository = mock(UsersRepositoryPort.class);
+		PasswordEncoderPort encoder = mock(PasswordEncoderPort.class);
+		TokenServicePort tokenService = mock(TokenServicePort.class);
+		// Servicio real a probar.
+		AuthenticationService service = new AuthenticationService(repository, encoder, tokenService);
+
+		// Usuario de ejemplo que retornara el repositorio.
+		UsersModel usuario = new UsersModel(
+				1L,
+				"Ana",
+				"Garcia",
+				"123",
+				"+573001112233",
+				LocalDate.now().minusYears(20),
+				"ana@example.com",
+				"bcrypt",
+				Role.ADMIN);
+
+		// El usuario existe, pero la contrasena no coincide.
+		when(repository.findByEmail("ana@example.com")).thenReturn(Optional.of(usuario));
+		when(encoder.matches("secreto", "bcrypt")).thenReturn(false);
+
+		// Asercion unica: debe lanzar excepcion.
+		assertThatThrownBy(() -> service.login(
+				new AuthenticationUseCase.LoginCommand("ana@example.com", "secreto")))
+				.isInstanceOf(UnauthorizedException.class);
 	}
 }

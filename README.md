@@ -2,6 +2,7 @@
 
 Microservicio de gestion de usuarios para la plazoleta de comidas.
 Implementa HU1 (crear propietario) y HU5 (autenticacion por correo y clave).
+Incluye HU6 (crear cuenta empleado).
 
 ## Arquitectura
 
@@ -15,7 +16,7 @@ Hexagonal (puertos y adaptadores).
 
 ## Requisitos
 
-- Java 21
+- Java 25
 - PostgreSQL
 - Gradle
 
@@ -47,6 +48,7 @@ El token incluye:
 
 - `POST /usuarios/login` (publico)
 - `POST /usuarios/propietarios` (requiere rol ADMIN)
+- `POST /usuarios/empleados` (requiere rol PROPIETARIO)
 - `GET /usuarios/{id}/rol` (publico, consumo interno entre microservicios)
 
 ### Login
@@ -93,6 +95,30 @@ Validaciones:
 - Celular maximo 13 caracteres, permite +.
 - Documento de identidad numerico.
 - Mayor de edad.
+- Clave se almacena con bcrypt.
+
+### Crear empleado
+
+Request body:
+
+```json
+{
+  "nombre": "Luis",
+  "apellido": "Perez",
+  "documentoIdentidad": "987654",
+  "celular": "+573001112244",
+  "correo": "luis@example.com",
+  "clave": "secreto",
+  "idRol": "EMPLEADO"
+}
+```
+
+Validaciones:
+
+- Email con formato valido.
+- Celular maximo 13 caracteres, permite +.
+- Documento de identidad numerico.
+- Rol debe ser EMPLEADO.
 - Clave se almacena con bcrypt.
 
 ## OpenAPI
